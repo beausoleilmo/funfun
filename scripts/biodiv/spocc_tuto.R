@@ -1,0 +1,300 @@
+library(spocc)
+  # Single data sources
+  (res <- occ(query = 'Accipiter striatus', from = 'gbif', limit = 5))
+  res$gbif
+  occ2df(res$gbif)
+  resi = inspect(res)
+  resi$gbif$`5006690680`
+  (res <- occ(query = 'Accipiter striatus', from = 'ebird', limit = 50))
+  res$ebird
+
+    nc <- sf::st_read(system.file("shape/nc.shp", package="sf"))
+  (res <- occ(query = 'Danaus plexippus', from = 'inat', limit = 50,geometry=nc,
+              has_coords = TRUE))
+  res$inat
+  res$inat$data
+  data.table::rbindlist(res$inat$data$Danaus_plexippus$photos)
+  (res <- occ(query = 'Bison bison', from = 'vertnet', limit = 5))
+  res$vertnet
+  res$vertnet$data$Bison_bison
+  occ2df(res)
+  
+  # Paging
+  one <- occ(query = 'Accipiter striatus', from = 'gbif', limit = 5)
+  two <- occ(query = 'Accipiter striatus', from = 'gbif', limit = 5, start = 5)
+  one$gbif
+  two$gbif
+  
+  # iNaturalist limits: they allow at most 10,000; query through GBIF to get
+  # more than 10,000
+  # See https://www.gbif.org/dataset/50c9509d-22c7-4a22-a47d-8c48425ef4a7
+  # x <- occ(query = 'Danaus plexippus', from = 'gbif', limit = 10100, 
+  #   gbifopts = list(datasetKey = "50c9509d-22c7-4a22-a47d-8c48425ef4a7"))
+  # x$gbif
+  
+  # Date range searches across data sources
+  ## Not possible for ebird
+  ## ala
+  occ(date = c('2018-01-01T00:00:00Z', '2018-03-28T00:00:00Z'), from = 'ala', limit = 5)
+  ## gbif
+  occ(query = 'Accipiter striatus', date = c('2010-08-01', '2010-08-31'), from = 'gbif', limit=5)
+  ## vertnet
+  occ(query = 'Mustela nigripes', date = c('1990-01-01', '2015-12-31'), from = 'vertnet', limit=5)
+  ## idigbio
+  occ(query = 'Acer', date = c('2010-01-01', '2015-12-31'), from = 'idigbio', limit=5)
+  ## obis
+  occ(query = 'Mola mola', date = c('2015-01-01', '2015-12-31'), from = 'obis', limit=5)
+  ## inat
+  occ(query = 'Danaus plexippus', date = c('2015-01-01', '2015-12-31'), from = 'inat', limit=5)
+  
+  
+  # Restrict to records with coordinates
+  occ(query = "Acer", from = "idigbio", limit = 5, has_coords = TRUE)
+  
+  occ(query = 'Setophaga caerulescens', from = 'ebird', ebirdopts = list(loc='US'))
+  occ(query = 'Spinus tristis', from = 'ebird', ebirdopts =
+        list(method = 'ebirdgeo', lat = 42, lng = -76, dist = 50))
+  
+  # idigbio data
+  ## scientific name search
+  occ(query = "Acer", from = "idigbio", limit = 5)
+  occ(query = "Acer", from = "idigbio", idigbioopts = list(offset = 5, limit  = 3))
+  ## geo search
+  bounds <- c(-120, 40, -100, 45)
+  occ(from = "idigbio", geometry = bounds, limit = 10)
+  ## just class arachnida, spiders
+  occ(idigbioopts = list(rq = list(class = 'arachnida')), from = "idigbio", limit = 10)
+  ## search certain recordsets
+  sets <- c("1ffce054-8e3e-4209-9ff4-c26fa6c24c2f",
+            "8dc14464-57b3-423e-8cb0-950ab8f36b6f", 
+            "26f7cbde-fbcb-4500-80a9-a99daa0ead9d")
+  occ(idigbioopts = list(rq = list(recordset = sets)), from = "idigbio", limit = 10)
+  
+  # Many data sources
+  (out <- occ(query = 'Pinus contorta', from=c('gbif','vertnet'), limit=10))
+  
+  ## Select individual elements
+  out$gbif
+  out$gbif$data
+  out$vertnet
+  
+  ## Coerce to combined data.frame, selects minimal set of
+  ## columns (name, lat, long, provider, date, occurrence key)
+  occ2df(out)
+  
+  # Pass in limit parameter to all sources. This limits the number of occurrences
+  # returned to 10, in this example, for all sources, in this case gbif and inat.
+  occ(query='Pinus contorta', from=c('gbif','inat'), limit=10)
+  
+  # Geometry
+  ## Pass in geometry parameter to all sources. This constraints the search to the
+  ## specified polygon for all sources, gbif in this example.
+  ## Check out http://arthur-e.github.io/Wicket/sandbox-gmaps3.html to get a WKT string
+  occ(query='Accipiter', from='gbif',
+      geometry='POLYGON((30.1 10.1, 10 20, 20 60, 60 60, 30.1 10.1))')
+  
+  polqc = 'POLYGON((-79 44, -79 65, -56 65, -65 44, -79 44))'
+  wkt_vis(polqc)
+  nc <- st_read(system.file("shape/nc.shp", package="sf"))
+  
+  occ(query='Danaus plexippus', from='inat', geometry=nc)
+  
+  ## Or pass in a bounding box, which is automatically converted to WKT (required by GBIF)
+  ## via the bbox2wkt function. The format of a bounding box is
+  ## [min-longitude, min-latitude, max-longitude, max-latitude].
+  occ(query='Accipiter striatus', from='gbif', geometry=c(-125.0,38.4,-121.8,40.9))
+  
+  ## lots of results, can see how many by indexing to meta
+  res <- occ(query='Accipiter striatus', from='gbif',
+             geometry='POLYGON((-69.9 49.2,-69.9 29.0,-123.3 29.0,-123.3 49.2,-69.9 49.2))')
+  res$gbif
+  
+  ## You can pass in geometry to each source separately via their opts parameter, at
+  ## least those that support it. Note that if you use rinat, you reverse the order, with
+  ## latitude first, and longitude second, but here it's the reverse for consistency across
+  ## the spocc package
+  bounds <- c(-125.0,38.4,-121.8,40.9)
+  occ(query = 'Danaus plexippus', from="inat", geometry=bounds)
+  
+  ## Passing geometry with multiple sources
+  occ(query = 'Danaus plexippus', from=c("inat","gbif"), geometry=bounds)
+  
+  ## Using geometry only for the query
+  ### A single bounding box
+  occ(geometry = bounds, from = "gbif", limit=50)
+  ### Many bounding boxes
+  datt=occ(geometry = list(c(-125.0,38.4,-121.8,40.9), c(-115.0,22.4,-111.8,30.9)), from = "gbif")
+  datt$gbif
+  datt$gbif |> 
+    st_as_sfc(coords = c('longitude', 'latitude'))
+  ## Geometry only with WKT
+  wkt <- 'POLYGON((-98.9 44.2,-89.1 36.6,-116.7 37.5,-102.5 39.6,-98.9 44.2))'
+  occ(from = "gbif", geometry = wkt, limit = 10)
+  
+  # Specify many data sources, another example
+  ebirdopts = list(loc = 'US'); gbifopts  =  list(country = 'US')
+  out <- occ(query = 'Setophaga caerulescens', from = c('gbif','inat','ebird'),
+             gbifopts = gbifopts, ebirdopts = ebirdopts, limit=20)
+  occ2df(out)
+  
+  # Pass in many species names, combine just data to a single data.frame, and
+  # first six rows
+  spnames <- c('Accipiter striatus', 'Setophaga caerulescens', 'Spinus tristis')
+  (out <- occ(query = spnames, from = 'gbif', gbifopts = list(hasCoordinate = TRUE), limit=25))
+  df <- occ2df(out)
+  head(df)
+  
+  # no query, geometry, or ids passed
+  ## many dataset keys to gbif
+  dsets <- c("14f3151a-e95d-493c-a40d-d9938ef62954", "f934f8e2-32ca-46a7-b2f8-b032a4740454")
+  occ(limit = 20, from = "gbif", gbifopts = list(datasetKey = dsets))
+  ## class name to idigbio
+  occ(limit = 20, from = "idigbio", idigbioopts = list(rq = list(class = 'arachnida')))
+  
+  # taxize integration
+  ## You can pass in taxonomic identifiers
+  library("taxize")
+  (ids <- get_ids(c("Chironomus riparius","Pinus contorta"), db = c('itis','gbif')))
+  occ(ids = ids, from='gbif', limit=20)
+  
+  (ids <- get_ids("Chironomus riparius", db = 'gbif'))
+  occ(ids = ids, from='gbif', limit=20)
+  
+  (ids <- get_gbifid("Chironomus riparius"))
+  occ(ids = ids, from='gbif', limit=20)
+  
+  ## sf classes
+  library("sp")
+  library("sf")
+  one <- Polygon(cbind(c(91,90,90,91), c(30,30,32,30)))
+  spone = Polygons(list(one), "s1")
+  sppoly = SpatialPolygons(list(spone), as.integer(1))
+  
+  ## single polygon in a sf class
+  x <- st_as_sf(sppoly)
+  out <- occ(geometry = x, limit=50)
+  out$gbif$data
+  mapr::map_leaflet(out)
+  
+  ## single polygon in a sfc class
+  x <- st_as_sf(sppoly)
+  out <- occ(geometry = x[[1]], limit=50)
+  out$gbif$data
+  
+  ## single polygon in a sf POLYGON class
+  x <- st_as_sf(sppoly)
+  x <- unclass(x[[1]])[[1]]
+  class(x)
+  out <- occ(geometry = x, limit=50)
+  out$gbif$data
+  
+  ## two polygons in an sf class
+  one <- Polygon(cbind(c(-121.0,-117.9,-121.0,-121.0), c(39.4, 37.1, 35.1, 39.4)))
+  two <- Polygon(cbind(c(-123.0,-121.2,-122.3,-124.5,-123.5,-124.1,-123.0),
+                       c(44.8,42.9,41.9,42.6,43.3,44.3,44.8)))
+  spone = Polygons(list(one), "s1")
+  sptwo = Polygons(list(two), "s2")
+  sppoly = SpatialPolygons(list(spone, sptwo), 1:2)
+  sppoly_df <- SpatialPolygonsDataFrame(sppoly, 
+                                        data.frame(a=c(1,2), b=c("a","b"), c=c(TRUE,FALSE),
+                                                   row.names=row.names(sppoly)))
+  x <- st_as_sf(sppoly_df)
+  out <- occ(geometry = x, limit=50)
+  out$gbif$data
+  
+  
+  # curl debugging
+  occ(query = 'Accipiter striatus', from = 'gbif', limit=10, 
+      callopts=list(verbose = TRUE))
+  occ(query = 'Accipiter striatus', from = 'inat', 
+      callopts=list(verbose = TRUE))
+  occ(query = 'Mola mola', from = 'obis', limit = 200, 
+      callopts = list(verbose = TRUE))
+  
+  ########## More thorough data source specific examples
+  # idigbio
+  ## scientific name search
+  res <- occ(query = "Acer", from = "idigbio", limit = 5)
+  res$idigbio
+  
+  ## geo search
+  ### bounding box
+  bounds <- c(-120, 40, -100, 45)
+  occ(from = "idigbio", geometry = bounds, limit = 10)
+  ### wkt
+  # wkt <- 'POLYGON((-69.9 49.2,-69.9 29.0,-123.3 29.0,-123.3 49.2,-69.9 49.2))'
+  wkt <- 'POLYGON((-98.9 44.2,-89.1 36.6,-116.7 37.5,-102.5 39.6,-98.9 44.2))'
+  occ(from = "idigbio", geometry = wkt, limit = 10)
+  
+  ## limit fields returned
+  occ(query = "Acer", from = "idigbio", limit = 5,
+      idigbioopts = list(fields = "scientificname"))
+  
+  ## offset and max_items
+  occ(query = "Acer", from = "idigbio", limit = 5,
+      idigbioopts = list(offset = 10))
+  
+  ## sort
+  occ(query = "Acer", from = "idigbio", limit = 5,
+      idigbioopts = list(sort = TRUE))$idigbio
+  occ(query = "Acer", from = "idigbio", limit = 5,
+      idigbioopts = list(sort = FALSE))$idigbio
+  
+  ## more complex queries
+  ### parameters passed to "rq", get combined with the name queried
+  occ(query = "Acer", from = "idigbio", limit = 5,
+      idigbioopts = list(rq = list(basisofrecord="fossilspecimen")))$idigbio
+  
+  #### NOTE: no support for multipolygons yet
+  ## WKT's are more flexible than bounding box's. You can pass in a WKT with multiple
+  ## polygons like so (you can use POLYGON or MULTIPOLYGON) when specifying more than one
+  ## polygon. Note how each polygon is in it's own set of parentheses.
+  # occ(query='Accipiter striatus', from='gbif',
+  #    geometry='MULTIPOLYGON((30 10, 10 20, 20 60, 60 60, 30 10),
+  #                           (30 10, 10 20, 20 60, 60 60, 30 10))')
+  
+  # OBIS examples
+  ## basic query
+  (res <- occ(query = 'Mola mola', from = 'obis', limit = 200))
+  ## get to obis data
+  res$obis
+  ## get obis + gbif data
+  (res <- occ(query = 'Mola mola', from = c('obis', 'gbif'), limit = 200))
+  res$gbif
+  res$obis
+  ## no match found
+  (res <- occ(query = 'Linguimaera thomsonia', from = 'obis'))
+  ## geometry query
+  geometry <- "POLYGON((8.98 48.05,15.66 48.05,15.66 45.40,8.98 45.40,8.98 48.05))"
+  (res <- occ(from = 'obis', geometry = geometry, limit = 50))
+  res$obis
+  
+  ## Pass in spatial classes
+  ## sp classes no longer supported
+  
+  ## Paging
+  (res1 <- occ(query = 'Mola mola', from = 'obis', limit = 10))
+  occ_ids <- res1$obis$data$Mola_mola$id
+  (res2 <- occ(query = 'Mola mola', from = 'obis',
+               limit = 10, obisopts = list(after = occ_ids[length(occ_ids)])))
+  res1$obis
+  res2$obis
+  ## Pass in any parameters to obisopts as a list
+  (res <- occ(query = 'Mola mola', from = 'obis', 
+              obisopts = list(startdepth = 40, enddepth = 50)))
+  min(res$obis$data$Mola_mola$minimumDepthInMeters, na.rm=TRUE)
+  max(res$obis$data$Mola_mola$maximumDepthInMeters, na.rm=TRUE)
+  
+  
+  # ALA examples
+  ## basic query
+  (res <- occ(query = 'Alaba vibex', from = 'ala', limit = 200))
+  ## get to ala data
+  res$ala
+  occ2df(res)
+  
+  # geometry search
+  (x <- occ(query = "Macropus", from = 'ala',
+            geometry = "POLYGON((145 -37,150 -37,150 -30,145 -30,145 -37))"))
+  x$ala
+  occ2df(x)
