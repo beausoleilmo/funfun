@@ -34,7 +34,7 @@ message(mss)
 #   version = gv,
 #   dir = pathGBIF
 # )
-gbif <- gbif_local(dir = "/Volumes/Disk_fun/gbif_data/occurrence/2025-06-01/occurrence.parquet")
+gbif <- gbif_local(dir = "~/Bureau/gbif_data/occurrence/2025-06-01/occurrence.parquet")
 
 names(gbif)
 
@@ -42,6 +42,7 @@ dset = gbif |>
   count(datasetkey) |> 
   arrange(-n) |> 
   collect()
+
 lic = gbif |> 
   count(license) |> 
   arrange(-n) |> 
@@ -53,28 +54,7 @@ head_gbif = gbif |>
 
 # get GBIF data 
 tictoc::tic() # 
-df2 <- gbif |> 
-  # dplyr::select(decimallatitude, 
-  #               decimallongitude, 
-  #               scientificname,
-  #               taxonrank,
-  #               phylum, 
-  #               class, 
-  #               order, 
-  #               family, 
-  #               genus,
-  #               species, 
-  #               infraspecificepithet, 
-  #               individualcount,
-  #               datasetkey,
-  #               publishingorgkey,
-  #               occurrencestatus,
-  #               coordinateuncertaintyinmeters, 
-  #               coordinateprecision, 
-  #               identifiedby,
-  #               basisofrecord,
-  #               license,
-  #               countrycode) |> 
+gbif_inat_ca_pres_Hobs <- gbif |> 
   filter(
     datasetkey == '50c9509d-22c7-4a22-a47d-8c48425ef4a7', # iNaturalist Research-grade Observations, https://www.gbif.org/dataset/50c9509d-22c7-4a22-a47d-8c48425ef4a7
     countrycode == "CA",
@@ -82,4 +62,10 @@ df2 <- gbif |>
     basisofrecord == 'HUMAN_OBSERVATION'
   ) |> 
   collect() 
+tictoc::toc()
+
+tictoc::tic() # 
+write.csv(x = gbif_inat_ca_pres_Hobs, 
+          file = "~/Bureau/gbif_inat_ca_pres_Hobs.csv", 
+          row.names = FALSE)
 tictoc::toc()
